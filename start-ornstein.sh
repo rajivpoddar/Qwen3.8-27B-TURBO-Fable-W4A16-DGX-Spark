@@ -12,6 +12,7 @@ export MODEL_REVISION="${MODEL_REVISION:-f4fa57a13de0c14fae62aacac721faa73f2a134
 export QUANT="${QUANT:-bf16}"
 export SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-ornstein3.8-27b}"
 export CONTAINER_NAME="${CONTAINER_NAME:-ornstein3.8-27b-sglang}"
+export PORT="${PORT:-30000}"
 export PID_FILE="${PID_FILE:-.ornstein-sglang.pid}"
 export LOG_FILE="${LOG_FILE:-.ornstein-sglang.log}"
 
