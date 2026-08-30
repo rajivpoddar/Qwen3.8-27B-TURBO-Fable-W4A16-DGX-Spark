@@ -35,7 +35,7 @@ docker run --rm \
   "${IMAGE}" \
   -c 'from huggingface_hub import snapshot_download; print(snapshot_download(repo_id=__import__("os").environ["MODEL_ID"], revision=__import__("os").environ["MODEL_REVISION"], cache_dir=__import__("os").environ["HF_HOME"]))'
 
-snapshot_dir="${HF_HOME}/hub/models--GestaltLabs--Ornstein3.8-27B/snapshots/${MODEL_REVISION}"
+snapshot_dir="${HF_HOME}/models--GestaltLabs--Ornstein3.8-27B/snapshots/${MODEL_REVISION}"
 [[ -r "${snapshot_dir}/model.safetensors.index.json" ]] || {
   echo "Downloaded snapshot is missing model.safetensors.index.json"; exit 1;
 }
