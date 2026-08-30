@@ -13,6 +13,9 @@
 !bench/ndec.py
 # DFlash2 path (2026-08-19): serving script, image builds, and the overlay
 !start-dflash.sh
+!start-ornstein.sh
+!stop-ornstein.sh
+!prepare-ornstein.sh
 # DFlash2 build machinery (self-contained builder + patch + overlay)
 !patch/
 !patch/**

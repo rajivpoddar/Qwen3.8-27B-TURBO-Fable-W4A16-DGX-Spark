@@ -132,15 +132,18 @@ if [[ -f "${SCRIPT_DIR}/.env" ]]; then
 fi
 
 QUANT="${QUANT:-nvfp4}"
-case "${QUANT}" in
-  bf16) MODEL_ID="Qwen/Qwen3.8-27B" ;;
-  fp8)  MODEL_ID="Qwen/Qwen3.8-27B-FP8" ;;
-  nvfp4|nvfp4-bf16|nvfp4-bf16-head)
-        MODEL_ID="RadixArk/Qwen3.8-27B-NVFP4-BF16-LMHead" ;;
-  nvfp4-fp4|nvfp4-fp4-head)
-        MODEL_ID="RadixArk/Qwen3.8-27B-NVFP4" ;;
-  *) echo "Unknown QUANT '${QUANT}' (use bf16|fp8|nvfp4|nvfp4-fp4)"; exit 1 ;;
-esac
+if [[ -z "${MODEL_ID:-}" ]]; then
+  case "${QUANT}" in
+    bf16) MODEL_ID="Qwen/Qwen3.8-27B" ;;
+    fp8)  MODEL_ID="Qwen/Qwen3.8-27B-FP8" ;;
+    nvfp4|nvfp4-bf16|nvfp4-bf16-head)
+          MODEL_ID="RadixArk/Qwen3.8-27B-NVFP4-BF16-LMHead" ;;
+    nvfp4-fp4|nvfp4-fp4-head)
+          MODEL_ID="RadixArk/Qwen3.8-27B-NVFP4" ;;
+    *) echo "Unknown QUANT '${QUANT}' (use bf16|fp8|nvfp4|nvfp4-fp4)"; exit 1 ;;
+  esac
+fi
+MODEL_REVISION="${MODEL_REVISION:-}"
 
 # Context length: any value from native up to the model's validated 1M.
 # YaRN controlled explicitly by YARN (0|1), plus auto-on at exactly 1M.
@@ -228,20 +231,26 @@ fi
 MAMBA_SLOTS_PER_REQ=$(( 4 - MAMBA_SKIP_DECODE_LOCK ))
 MAMBA_CACHE_SIZE=$(( MAX_CONCURRENT_REQUESTS * MAMBA_SLOTS_PER_REQ ))
 
-SERVED_MODEL_NAME="qwen3.8-27b-sglang"
+SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-qwen3.8-27b-sglang}"
 # Image override (shell env wins): lets start-dspark.sh run a patched
 # derivative image (e.g. qwen38-tier-a:local) and roll back to stock by
 # simply not setting IMAGE. Not documented in README/CHANGELOG on purpose.
 IMAGE="${IMAGE:-lmsysorg/sglang:qwen38-27b}"
-CONTAINER_NAME="qwen3.8-27b-sglang"
-HOST="0.0.0.0"
-PORT="8888"
-PID_FILE=".sglang.pid"
-LOG_FILE=".sglang.log"
-WORK_DIR="$(pwd)"
-HF_HOME="${WORK_DIR}/.cache/huggingface"
-TRITON_CACHE_DIR="${WORK_DIR}/.cache/triton"
+CONTAINER_NAME="${CONTAINER_NAME:-qwen3.8-27b-sglang}"
+HOST="${HOST:-0.0.0.0}"
+PORT="${PORT:-8888}"
+PID_FILE="${PID_FILE:-.sglang.pid}"
+LOG_FILE="${LOG_FILE:-.sglang.log}"
+WORK_DIR="${WORK_DIR:-$(pwd)}"
+HF_HOME="${HF_HOME:-${WORK_DIR}/.cache/huggingface}"
+TRITON_CACHE_DIR="${TRITON_CACHE_DIR:-${WORK_DIR}/.cache/triton}"
+MEM_FRACTION_STATIC="${MEM_FRACTION_STATIC:-0.95}"
 READY_URL="http://127.0.0.1:${PORT}/v1/models"
+
+MODEL_REVISION_ARGS=()
+if [[ -n "${MODEL_REVISION}" ]]; then
+  MODEL_REVISION_ARGS=(--revision "${MODEL_REVISION}")
+fi
 
 command -v docker >/dev/null 2>&1 || {
   echo "docker is not on PATH"
@@ -274,6 +283,7 @@ if docker ps -a --format '{{.Names}}' | grep -qx "${CONTAINER_NAME}"; then
 fi
 
 echo "Starting SGLang container for ${MODEL_ID} (${QUANT})"
+[[ -n "${MODEL_REVISION}" ]] && echo "Model revision: ${MODEL_REVISION}"
 echo "Context: ${CONTEXT_LENGTH} tokens${YARN_SUFFIX:-}"
 echo "Max concurrent requests: ${MAX_CONCURRENT_REQUESTS} (mamba pool ${MAMBA_CACHE_SIZE} slots)"
 echo "Spec decode: MTP steps=${SPEC_STEPS} topk=${SPEC_TOPK} draft=${SPEC_DRAFT}"
@@ -310,9 +320,10 @@ docker run -d \
   "${IMAGE}" \
   python3 -m sglang.launch_server \
   --model-path "${MODEL_ID}" \
+  "${MODEL_REVISION_ARGS[@]}" \
   --served-model-name "${SERVED_MODEL_NAME}" \
   --trust-remote-code \
-  --mem-fraction-static 0.95 \
+  --mem-fraction-static "${MEM_FRACTION_STATIC}" \
   --attention-backend flashinfer \
   --chunked-prefill-size "${CHUNKED_PREFILL}" \
   "${PREFILL_GRAPH_ARGS[@]}" \

@@ -5,11 +5,11 @@ set -euo pipefail
 # ./start.sh (EAGLE), ./start-dspark.sh (DSpark), or ./start-mtp-8889.sh.
 # Idempotent: anything that isn't running is skipped with a message.
 
-CONTAINER_NAME="qwen3.8-27b-sglang"        # main engine (start.sh / start-dspark.sh)
-MTP_CONTAINER_NAME="qwen3.8-27b-sglang-mtp" # MTP engine (start-mtp-8889.sh)
-PID_FILE=".sglang.pid"
-MTP_PID_FILE=".sglang-mtp.pid"
-LOG_FILE=".sglang.log"
+CONTAINER_NAME="${CONTAINER_NAME:-qwen3.8-27b-sglang}"        # main engine (start.sh / start-dspark.sh)
+MTP_CONTAINER_NAME="${MTP_CONTAINER_NAME:-qwen3.8-27b-sglang-mtp}" # MTP engine (start-mtp-8889.sh)
+PID_FILE="${PID_FILE:-.sglang.pid}"
+MTP_PID_FILE="${MTP_PID_FILE:-.sglang-mtp.pid}"
+LOG_FILE="${LOG_FILE:-.sglang.log}"
 
 command -v docker >/dev/null 2>&1 || {
   echo "docker is not on PATH"

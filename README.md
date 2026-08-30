@@ -13,6 +13,8 @@
 
 Opinionated, ready-to-run scripts to serve **[Qwen3.8-27B](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4-BF16-LMHead)** with **[SGLang](https://docs.sglang.io)** in Docker on an NVIDIA DGX Spark (GB10, aarch64). Three swap-in serving modes — EAGLE/MTP, DSpark, or DFlash2 — with every tuning choice measured on-device instead of guessed.
 
+This fork also includes an offline-preparable **[Ornstein3.8-27B](https://huggingface.co/GestaltLabs/Ornstein3.8-27B)** profile. It pins the exact checkpoint revision, uses the checkpoint's unchanged MTP head, reserves host-memory headroom, and caps the first evaluation at six concurrent agent slots. Prepare it without touching a live GPU service with `./prepare-ornstein.sh`; later start it with `./start-ornstein.sh` and stop it with `./stop-ornstein.sh`. The profile intentionally does not use the base-Qwen DSpark or DFlash2 drafter.
+
 **DSpark and DFlash2 are faster on code.** Versus MTP, DSpark gives the essay back; DFlash2 does not. Everyday chat on the same streamed probe comes out a DFlash2 win once tokens are counted right, and the long-essay probe is on the MTP side of the table. **All measured numbers, ranges, counting notes and caveats live in [Measured on this box](#measured-on-this-box) — one place, nothing repeated.**
 
 The launch flags start from the **[SGLang cookbook's DGX Spark cell](https://docs.sglang.io/cookbook/autoregressive/Qwen/Qwen3.8-27B)** (NVFP4 + DSpark), then pin choices measured on this box: GDN **bf16** (cookbook float32 was −3%), `extra_buffer_lazy`, mem **0.90**, chunk **8192**, DSpark **block 7 / 8 draft tokens**, torch.compile + decode graphs, X5 cpuset.
