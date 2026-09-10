@@ -324,6 +324,7 @@ docker run -d \
   --served-model-name "${SERVED_MODEL_NAME}" \
   --trust-remote-code \
   --mem-fraction-static "${MEM_FRACTION_STATIC}" \
+  --sleep-on-idle \
   --attention-backend flashinfer \
   --chunked-prefill-size "${CHUNKED_PREFILL}" \
   "${PREFILL_GRAPH_ARGS[@]}" \
