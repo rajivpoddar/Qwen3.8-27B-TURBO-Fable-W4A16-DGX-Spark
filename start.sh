@@ -244,6 +244,7 @@ LOG_FILE="${LOG_FILE:-.sglang.log}"
 WORK_DIR="${WORK_DIR:-$(pwd)}"
 HF_HOME="${HF_HOME:-${WORK_DIR}/.cache/huggingface}"
 TRITON_CACHE_DIR="${TRITON_CACHE_DIR:-${WORK_DIR}/.cache/triton}"
+CHAT_TEMPLATE="${CHAT_TEMPLATE:-${SCRIPT_DIR}/chat-template-effort-map.jinja}"
 MEM_FRACTION_STATIC="${MEM_FRACTION_STATIC:-0.95}"
 READY_URL="http://127.0.0.1:${PORT}/v1/models"
 
@@ -263,6 +264,10 @@ command -v curl >/dev/null 2>&1 || {
 }
 
 mkdir -p "${HF_HOME}" "${TRITON_CACHE_DIR}"
+if [[ ! -f "${CHAT_TEMPLATE}" ]]; then
+  echo "Chat template not found: ${CHAT_TEMPLATE}"
+  exit 1
+fi
 
 # Pick up HF_TOKEN from ~/.bashrc (defined without `export` there) so the
 # container gets authenticated Hub access (higher rate limits, faster downloads).
@@ -317,6 +322,7 @@ docker run -d \
   "${ALLOW_LONGER_ARGS[@]}" \
   -v "${HF_HOME}:/root/.cache/huggingface" \
   -v "${TRITON_CACHE_DIR}:/root/.triton" \
+  -v "${CHAT_TEMPLATE}:/opt/heydonna/chat-template-effort-map.jinja:ro" \
   "${IMAGE}" \
   python3 -m sglang.launch_server \
   --model-path "${MODEL_ID}" \
@@ -340,6 +346,7 @@ docker run -d \
   --speculative-eagle-topk "${SPEC_TOPK}" \
   --speculative-num-draft-tokens "${SPEC_DRAFT}" \
   --reasoning-parser qwen3 \
+  --chat-template /opt/heydonna/chat-template-effort-map.jinja \
   --tool-call-parser qwen3_coder \
   --sampling-defaults model \
   --enable-metrics \

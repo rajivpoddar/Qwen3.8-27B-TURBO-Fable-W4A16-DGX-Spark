@@ -21,6 +21,7 @@
 !start-turbo-fable.sh
 !stop-turbo-fable.sh
 !prepare-turbo-fable.sh
+!chat-template-effort-map.jinja
 # Decision records and plans, per file — analysis write-ups stay untracked
 !docs/
 !docs/brainstorms/
