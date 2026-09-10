@@ -1,7 +1,7 @@
-# Qwen3.8 27B on SGLang for DGX Spark
+# Qwen3.8-27B TURBO Fable W4A16 on DGX Spark
 
 [![SGLang](https://img.shields.io/badge/SGLang-cookbook-blue)](https://docs.sglang.io/cookbook/autoregressive/Qwen/Qwen3.8-27B)
-[![Model](https://img.shields.io/badge/model-Qwen3.8--27B-informational)](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4-BF16-LMHead)
+[![Model](https://img.shields.io/badge/model-TURBO%20Fable%20W4A16-informational)](https://huggingface.co/SeatownSin/Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NM-DAU-NVFP4-W4A16)
 [![arch](https://img.shields.io/badge/arch-arm64%20%2F%20GB10-lightgrey)](#)
 
 <p align="center">
@@ -11,11 +11,13 @@
   <a href="https://x.com/MiaAI_lab" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 8px;vertical-align:middle;"><img src="https://img.shields.io/badge/Follow%20me%20on%20X-000000?style=for-the-badge&logo=x&logoColor=white" alt="Follow Mia on X" height="28" style="height:28px;width:auto;vertical-align:middle;border:0;" /></a>
 </p>
 
-Opinionated, ready-to-run scripts to serve **[Qwen3.8-27B](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4-BF16-LMHead)** with **[SGLang](https://docs.sglang.io)** in Docker on an NVIDIA DGX Spark (GB10, aarch64). Three swap-in serving modes — EAGLE/MTP, DSpark, or DFlash2 — with every tuning choice measured on-device instead of guessed.
+Ready-to-run scripts for serving **[Qwen3.8-27B TURBO Fable W4A16](https://huggingface.co/SeatownSin/Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NM-DAU-NVFP4-W4A16)** with **[SGLang](https://docs.sglang.io)** in Docker on one NVIDIA DGX Spark (GB10, aarch64). The primary profile uses the model's mixed-precision ModelOpt export and native MTP head, with four-request admission, 262K context and conservative unified-memory allocation.
+
+This repository is derived from [MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark). The original base-Qwen, DSpark, DFlash2 and benchmark paths remain available for controlled comparisons.
 
 This fork also includes an offline-preparable **[Ornstein3.8-27B](https://huggingface.co/GestaltLabs/Ornstein3.8-27B)** profile. It pins the exact checkpoint revision, uses the checkpoint's unchanged MTP head, reserves host-memory headroom, caps the first evaluation at six concurrent agent slots, and listens on the existing Spark agent endpoint port `30000`. Prepare it without touching a live GPU service with `./prepare-ornstein.sh`; later start it with `./start-ornstein.sh` and stop it with `./stop-ornstein.sh`. The profile intentionally does not use the base-Qwen DSpark or DFlash2 drafter.
 
-The fork also carries a four-slot **[TURBO Fable W4A16](https://huggingface.co/SeatownSin/Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NM-DAU-NVFP4-W4A16)** profile. It pins the immutable mixed-precision ModelOpt export, keeps native 262K context and the checkpoint's stock MTP head, reserves host-memory headroom at `mem-fraction-static=0.75`, and preserves the existing `qwen3.8-27b` client alias on port `30000`. Stage it offline with `./prepare-turbo-fable.sh`, start it with `./start-turbo-fable.sh`, and stop it with `./stop-turbo-fable.sh`. The first qualification deliberately avoids an external base-Qwen DSpark/DFlash2 drafter because fine-tuning may reduce draft acceptance.
+The primary four-slot profile pins the immutable mixed-precision ModelOpt export, keeps native 262K context and the checkpoint's stock MTP head, reserves host-memory headroom at `mem-fraction-static=0.75`, and preserves the existing `qwen3.8-27b` client alias on port `30000`. Stage it offline with `./prepare-turbo-fable.sh`, start it with `./start-turbo-fable.sh`, and stop it with `./stop-turbo-fable.sh`. The first qualification deliberately avoids an external base-Qwen DSpark/DFlash2 drafter because fine-tuning may reduce draft acceptance.
 
 **DSpark and DFlash2 are faster on code.** Versus MTP, DSpark gives the essay back; DFlash2 does not. Everyday chat on the same streamed probe comes out a DFlash2 win once tokens are counted right, and the long-essay probe is on the MTP side of the table. **All measured numbers, ranges, counting notes and caveats live in [Measured on this box](#measured-on-this-box) — one place, nothing repeated.**
 
@@ -42,25 +44,29 @@ The launch flags start from the **[SGLang cookbook's DGX Spark cell](https://doc
 
 There is no separate download step: the container pulls the checkpoint into `./.cache/huggingface` on first start (~24 GB for the default NVFP4 BF16-head repo; the packed-FP4 twin is ~1.7 GB smaller on disk). The cookbook cites ~16.5 GB for the NVFP4 LM weights alone before the MTP head; the dense `lm_head` adds ~1.7 GB on disk / ~3.2 GB at runtime.
 
-## Quick start (ships as native 262K, 10 concurrent)
+## Quick start — TURBO Fable W4A16
 
 ```bash
-# 1. Copy the sample config once (creates ./.env if you don't have one)
-cp .env.sample .env
+# 1. Download and verify the immutable checkpoint while another service runs.
+./prepare-turbo-fable.sh
 
-# 2. Start the server
-./start-dspark.sh    # DSpark — code ~51.5; default chat ~23; long essay ~18
-# ./start.sh         # MTP — code ~34.5; default chat ~21; long essay ~24
-# ./start-dflash.sh  # DFlash2, NVFP4 target — code ~50.9; essay ~25.4; chat ~29–67 (streamed)
-#                    #   (bf16 base: DF_TARGET=bf16 — unbenched on this box)
-# ./start-turbo-fable.sh # Four-slot TURBO Fable W4A16 canary on :30000 (native MTP)
+# 2. During the cutover window, start the four-slot native-MTP profile.
+./start-turbo-fable.sh
 
 # 3. Use it
-curl http://127.0.0.1:8888/v1/models
+curl http://127.0.0.1:30000/v1/models
 
 # 4. Stop it
-./stop.sh
+./stop-turbo-fable.sh
 ```
+
+The profile defaults can be overridden per launch, for example:
+
+```bash
+MAX_CONCURRENT_REQUESTS=6 CHUNKED_PREFILL=2048 ./start-turbo-fable.sh
+```
+
+The inherited `./start.sh`, `./start-dspark.sh`, and `./start-dflash.sh` paths remain available for base-Qwen comparisons.
 
 `.env.sample` ships with `YARN=0`, `CONTEXT_LENGTH=262144` (native) and `MAX_CONCURRENT_REQUESTS=10` — so a fresh clone serves **262K context, YaRN off, 10 concurrent** after just the `cp` above. `.env` is the live config (plain `VAR=value` lines read by `start.sh`): shell exports of the same names win, `.env` fills the gaps, start.sh defaults apply last. Changes only take effect on the **next** launch — `./stop.sh && ./start-dspark.sh` (or `./start.sh` for MTP). For anything above native context (e.g. 1M) or a different concurrency, see [Long context & concurrency](#long-context--concurrency-up-to-1m-10-concurrent). Note: DSpark cannot use YaRN / context &gt; 262144 on this build (ditto DFlash2 — same draft-config leak).
 
@@ -72,6 +78,9 @@ All start scripts are idempotent: if the container is already running they say s
 
 | Script | What it does |
 |---|---|
+| `prepare-turbo-fable.sh` | Pulls the serving image, downloads the pinned TURBO Fable snapshot, and verifies the 11 shards, `MIXED_PRECISION` map, chat template and MTP tensors without starting the GPU server. |
+| `start-turbo-fable.sh` | Primary four-slot profile: pinned W4A16 target, native EAGLE/MTP 3/1/4, 262K context, FP8 KV cache, 4096-token prefill chunks, memory fraction 0.75, stable `qwen3.8-27b` alias on port 30000, and Prometheus/cache metrics. |
+| `stop-turbo-fable.sh` | Stops the TURBO Fable container through the shared idempotent shutdown path. |
 | `start.sh` | Launches the SGLang container (`docker run -d`, host network, `--shm-size 32g`), streams logs to `.sglang.log`, records the container ID in `.sglang.pid`, and polls `http://127.0.0.1:8888/v1/models` until the server is ready. **EAGLE/MTP speculative decoding** (`SPEC_STEPS/SPEC_TOPK/SPEC_DRAFT = 3/1/4`). Monitoring on by default: Prometheus `--enable-metrics` + `--enable-cache-report` (per issue #3). |
 | `start-dspark.sh` | Same service, **DSpark** instead of EAGLE: block-7 / unquant draft, torch.compile + decode-graph caps, `--num-continuous-decode-steps 2`, mem 0.90. Thin wrapper (`EXTRA_ARGS` → `start.sh`). **Code 51.5 vs MTP 34.5 — see [Measured on this box](#measured-on-this-box) for all numbers.** |
 | `start-dflash.sh` | Same service, **DFlash2** block-diffusion draft (default `z-lab/Qwen3.8-27B-DFlash2@50307d4`, pinned — same draft as the `incoai/…` mirror; `DRAFT_MODEL`/`DRAFT_REVISION` env-overridable). **Default target: NVFP4 BF16-head** `RadixArk/Qwen3.8-27B-NVFP4-BF16-LMHead` with `--mem-fraction-static 0.90` (dense `lm_head`, so DFLASH's selector uses the native dense path). Packed-FP4 head: `DF_TARGET=nvfp4-fp4` (the image's quantized-head selector handles it in place via `lm_head.quant_method.apply`; a dequant-once approach hard-rebooted this box). `DF_TARGET=bf16` selects `Qwen/Qwen3.8-27B`. Pulls the official digest-pinned image on first run if missing. Measured numbers: [Measured on this box](#measured-on-this-box). |
