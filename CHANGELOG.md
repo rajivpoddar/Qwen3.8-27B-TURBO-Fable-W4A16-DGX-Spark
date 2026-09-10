@@ -15,6 +15,9 @@ All notable changes to this project are documented here. Dates are commit dates.
   and the existing `qwen3.8-27b` client alias. External DSpark/DFlash2 drafting
   is intentionally deferred until acceptance is measured against this
   fine-tuned target.
+- Added an explicit `MAX_MAMBA_CACHE_SIZE` override and set this four-slot
+  profile to 64 checkpoints. Request admission remains four; the additional
+  checkpoints retain more long-context branch prefixes across agent turns.
 
 ## 2026-09-09 — default image bumped to a post-#35255 nightly (zombie-request fix)
 

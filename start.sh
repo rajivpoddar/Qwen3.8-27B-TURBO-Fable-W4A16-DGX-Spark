@@ -225,11 +225,19 @@ else
 fi
 
 
-# GDN state pool: slots = concurrency x S; S=4 for extra_buffer_lazy +
-# overlap scheduler, 3 with MAMBA_SKIP_DECODE_LOCK=1. Speculative verify
-# states are a SEPARATE buffer — the old x(S+D) pin over-provisioned 2x.
+# GDN state pool: slots = concurrency x S by default; S=4 for
+# extra_buffer_lazy + overlap scheduler, 3 with
+# MAMBA_SKIP_DECODE_LOCK=1. MAX_MAMBA_CACHE_SIZE can reserve additional
+# checkpoints for long-context branch-prefix reuse without increasing request
+# admission. Speculative verify states are a SEPARATE buffer — the old x(S+D)
+# pin over-provisioned the mandatory per-request pool 2x.
 MAMBA_SLOTS_PER_REQ=$(( 4 - MAMBA_SKIP_DECODE_LOCK ))
-MAMBA_CACHE_SIZE=$(( MAX_CONCURRENT_REQUESTS * MAMBA_SLOTS_PER_REQ ))
+MIN_MAMBA_CACHE_SIZE=$(( MAX_CONCURRENT_REQUESTS * MAMBA_SLOTS_PER_REQ ))
+MAMBA_CACHE_SIZE="${MAX_MAMBA_CACHE_SIZE:-${MIN_MAMBA_CACHE_SIZE}}"
+if (( MAMBA_CACHE_SIZE < MIN_MAMBA_CACHE_SIZE )); then
+  echo "MAX_MAMBA_CACHE_SIZE '${MAMBA_CACHE_SIZE}' is too small; need at least ${MIN_MAMBA_CACHE_SIZE} for ${MAX_CONCURRENT_REQUESTS} requests"
+  exit 1
+fi
 
 SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-qwen3.8-27b-sglang}"
 # Image override (shell env wins): lets start-dspark.sh run a patched

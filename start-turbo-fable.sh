@@ -25,6 +25,7 @@ export LOG_FILE="${LOG_FILE:-.turbo-fable-sglang.log}"
 # A 4096-token chunk trades some cold-prefill throughput for shorter decode
 # pauses under concurrent, long-lived coding-agent histories.
 export MAX_CONCURRENT_REQUESTS="${MAX_CONCURRENT_REQUESTS:-4}"
+export MAX_MAMBA_CACHE_SIZE="${MAX_MAMBA_CACHE_SIZE:-64}"
 export CONTEXT_LENGTH="${CONTEXT_LENGTH:-262144}"
 export YARN="${YARN:-0}"
 export CHUNKED_PREFILL="${CHUNKED_PREFILL:-4096}"
