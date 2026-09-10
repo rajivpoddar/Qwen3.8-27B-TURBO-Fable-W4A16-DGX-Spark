@@ -33,10 +33,10 @@ docker run --rm \
   -v "${HF_HOME}:/root/.cache/huggingface" \
   --entrypoint python3 \
   "${IMAGE}" \
-  -c 'from huggingface_hub import snapshot_download; import os; print(snapshot_download(repo_id=os.environ["MODEL_ID"], revision=os.environ["MODEL_REVISION"], cache_dir=os.environ["HF_HOME"]))'
+  -c 'from huggingface_hub import snapshot_download; import os; print(snapshot_download(repo_id=os.environ["MODEL_ID"], revision=os.environ["MODEL_REVISION"], cache_dir=os.path.join(os.environ["HF_HOME"], "hub")))'
 
 repo_cache_name="models--${MODEL_ID//\//--}"
-snapshot_dir="${HF_HOME}/${repo_cache_name}/snapshots/${MODEL_REVISION}"
+snapshot_dir="${HF_HOME}/hub/${repo_cache_name}/snapshots/${MODEL_REVISION}"
 
 for required in config.json model.safetensors.index.json hf_quant_config.json chat_template.jinja; do
   [[ -r "${snapshot_dir}/${required}" ]] || {
